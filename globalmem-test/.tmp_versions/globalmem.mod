@@ -1,0 +1,3 @@
+/home/book/100ask_imx6ull-qemu/linux-4.9.88/drivers/misc/globalmem-test/globalmem.ko
+/home/book/100ask_imx6ull-qemu/linux-4.9.88/drivers/misc/globalmem-test/globalmem.o
+
