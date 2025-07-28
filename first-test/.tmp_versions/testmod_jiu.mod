@@ -1,0 +1,3 @@
+/home/book/100ask_imx6ull-qemu/linux-4.9.88/drivers/misc/first-test/testmod_jiu.ko
+/home/book/100ask_imx6ull-qemu/linux-4.9.88/drivers/misc/first-test/testmod_jiu.o
+
