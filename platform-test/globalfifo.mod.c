@@ -31,7 +31,10 @@ __attribute__((section("__versions"))) = {
 	{ 0xc89de85, __VMLINUX_SYMBOL_STR(seq_printf) },
 	{ 0x59435cb7, __VMLINUX_SYMBOL_STR(single_open) },
 	{ 0x929dbad3, __VMLINUX_SYMBOL_STR(PDE_DATA) },
+	{ 0x8b2d7d64, __VMLINUX_SYMBOL_STR(dev_warn) },
 	{ 0x521b39ba, __VMLINUX_SYMBOL_STR(proc_create_data) },
+	{ 0xefd442fe, __VMLINUX_SYMBOL_STR(dev_err) },
+	{ 0xf87bf551, __VMLINUX_SYMBOL_STR(device_create_file) },
 	{ 0xd664465f, __VMLINUX_SYMBOL_STR(misc_register) },
 	{ 0x275ef902, __VMLINUX_SYMBOL_STR(__init_waitqueue_head) },
 	{ 0x57718273, __VMLINUX_SYMBOL_STR(__mutex_init) },
@@ -45,14 +48,16 @@ __attribute__((section("__versions"))) = {
 	{ 0x1000e51, __VMLINUX_SYMBOL_STR(schedule) },
 	{ 0xc7bcbc8d, __VMLINUX_SYMBOL_STR(add_wait_queue) },
 	{ 0xffd5a395, __VMLINUX_SYMBOL_STR(default_wake_function) },
+	{ 0xc031c111, __VMLINUX_SYMBOL_STR(fasync_helper) },
+	{ 0xba3b4911, __VMLINUX_SYMBOL_STR(_dev_info) },
+	{ 0xadaf9df6, __VMLINUX_SYMBOL_STR(misc_deregister) },
+	{ 0xc510b017, __VMLINUX_SYMBOL_STR(device_remove_file) },
+	{ 0xb99135e, __VMLINUX_SYMBOL_STR(remove_proc_entry) },
+	{ 0x91715312, __VMLINUX_SYMBOL_STR(sprintf) },
 	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
 	{ 0xfa2a45e, __VMLINUX_SYMBOL_STR(__memzero) },
 	{ 0x323cc41c, __VMLINUX_SYMBOL_STR(mutex_unlock) },
 	{ 0x5e50f6cd, __VMLINUX_SYMBOL_STR(mutex_lock) },
-	{ 0xc031c111, __VMLINUX_SYMBOL_STR(fasync_helper) },
-	{ 0xba3b4911, __VMLINUX_SYMBOL_STR(_dev_info) },
-	{ 0xadaf9df6, __VMLINUX_SYMBOL_STR(misc_deregister) },
-	{ 0xb99135e, __VMLINUX_SYMBOL_STR(remove_proc_entry) },
 	{ 0xefd6cf06, __VMLINUX_SYMBOL_STR(__aeabi_unwind_cpp_pr0) },
 };
 
@@ -61,5 +66,7 @@ __used
 __attribute__((section(".modinfo"))) =
 "depends=";
 
+MODULE_ALIAS("of:N*T*Cglobalfifo");
+MODULE_ALIAS("of:N*T*CglobalfifoC*");
 
-MODULE_INFO(srcversion, "EE6C4987D8C98B1EEC2EBB8");
+MODULE_INFO(srcversion, "7B62578BC42D525B32082FF");

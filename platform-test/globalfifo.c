@@ -20,9 +20,18 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 
+#include <linux/device.h>
+#include <linux/sysfs.h>
+
 #define GLOBALFIFO_SIZE 0x1000  // FIFO缓冲区大小4KB
 #define FIFO_CLEAR 0x1          // IOCTL清除命令
 #define GLOBALFIFO_MAJOR 231    // 主设备号
+
+static const struct of_device_id globalfifo_of_match[] = {
+    { .compatible = "globalfifo" },
+    {},
+};
+MODULE_DEVICE_TABLE(of, globalfifo_of_match);
 
 /* 设备结构体 */
 struct globalfifo_dev {
@@ -34,10 +43,52 @@ struct globalfifo_dev {
     wait_queue_head_t w_wait;   // 写等待队列
     struct fasync_struct *async_queue; // 异步通知队列
     struct miscdevice miscdev;  // 杂项设备结构
+    struct device *dev;
 };
 
 /* proc文件指针 */
 static struct proc_dir_entry *globalfifo_proc_entry;
+
+static ssize_t status_show(struct device *dev,
+                         struct device_attribute *attr,
+                         char *buf)
+{
+    struct globalfifo_dev *my_dev = dev_get_drvdata(dev);
+    ssize_t count = 0;
+    
+    mutex_lock(&my_dev->mutex);
+    count = sprintf(buf, "FIFO Status:\n"
+                   "Size: %d\n"
+                   "Used: %d\n"
+                   "Free: %d\n",
+                   GLOBALFIFO_SIZE,
+                   my_dev->current_len,
+                   GLOBALFIFO_SIZE - my_dev->current_len);
+    mutex_unlock(&my_dev->mutex);
+    
+    return count;
+}
+
+static ssize_t clear_store(struct device *dev,
+                          struct device_attribute *attr,
+                          const char *buf, size_t count)
+{
+    struct globalfifo_dev *my_dev = dev_get_drvdata(dev);
+    
+    if (strncmp(buf, "1", 1) == 0) {
+        mutex_lock(&my_dev->mutex);
+        my_dev->current_len = 0;
+        memset(my_dev->mem, 0, GLOBALFIFO_SIZE);
+        mutex_unlock(&my_dev->mutex);
+        printk(KERN_INFO "FIFO cleared via sysfs\n");
+    }
+    
+    return count;
+}
+
+/* 定义属性 */
+static DEVICE_ATTR_RO(status);
+static DEVICE_ATTR_WO(clear);
 
 /* 异步通知函数 */
 static int globalfifo_fasync(int fd, struct file *filp, int mode)
@@ -315,43 +366,63 @@ static void remove_globalfifo_proc(void)
 
 
 /* 设备探测函数 */
+
 static int globalfifo_probe(struct platform_device *pdev)
 {
     struct globalfifo_dev *gl;
     int ret;
 
-    // 分配设备结构内存
+    /* 分配并初始化设备结构体 */
     gl = devm_kzalloc(&pdev->dev, sizeof(*gl), GFP_KERNEL);
     if (!gl)
         return -ENOMEM;
-    
-    // 初始化杂项设备
-    gl->miscdev.minor = MISC_DYNAMIC_MINOR; // 动态分配次设备号
-    gl->miscdev.name = "globalfifo";        // 设备名称
-    gl->miscdev.fops = &globalfifo_fops;    // 文件操作集
 
-    // 初始化互斥锁和等待队列
+    /* 设置驱动私有数据 */
+    platform_set_drvdata(pdev, gl);
+    gl->dev = &pdev->dev;
+
+    /* 初始化互斥锁和等待队列 */
     mutex_init(&gl->mutex);
     init_waitqueue_head(&gl->r_wait);
     init_waitqueue_head(&gl->w_wait);
-    platform_set_drvdata(pdev, gl);  // 设置驱动数据
 
-    // 注册杂项设备
+    /* 设置并注册 miscdevice */
+    gl->miscdev.minor = MISC_DYNAMIC_MINOR;
+    gl->miscdev.name = "globalfifo";
+    gl->miscdev.fops = &globalfifo_fops;
+    gl->miscdev.parent = &pdev->dev;  // 设置父设备
+
     ret = misc_register(&gl->miscdev);
-    if (ret < 0)
-        goto err;
+    if (ret) {
+        dev_err(&pdev->dev, "Failed to register misc device\n");
+        return ret;
+    }
 
-    // 创建proc节点 
-    ret = create_globalfifo_proc(gl);
-    if (ret)
-	goto err_misc;
+    /* 创建 sysfs 属性文件 */
+    ret = device_create_file(&pdev->dev, &dev_attr_status);
+    if (ret) {
+        dev_err(&pdev->dev, "Failed to create status attribute\n");
+        goto err_misc;
+    }
 
-    dev_info(&pdev->dev, "globalfifo drv probed with proc support\n");
+    ret = device_create_file(&pdev->dev, &dev_attr_clear);
+    if (ret) {
+        dev_err(&pdev->dev, "Failed to create clear attribute\n");
+        goto err_status;
+    }
+
+    /* 创建 proc 文件 */
+    if (create_globalfifo_proc(gl)) {
+        dev_warn(&pdev->dev, "Failed to create proc entry\n");
+    }
+
+    dev_info(&pdev->dev, "globalfifo device probed successfully\n");
     return 0;
 
+err_status:
+    device_remove_file(&pdev->dev, &dev_attr_status);
 err_misc:
-	misc_deregister(&gl->miscdev);
-err:
+    misc_deregister(&gl->miscdev);
     return ret;
 }
 
@@ -363,6 +434,10 @@ static int globalfifo_remove(struct platform_device *pdev)
 
     // 删除proc节点
     remove_globalfifo_proc();
+
+    // 清理 sysfs
+    device_remove_file(&pdev->dev, &dev_attr_status);
+    device_remove_file(&pdev->dev, &dev_attr_clear);
 
     // 注销杂项设备
     misc_deregister(&gl->miscdev);
@@ -376,13 +451,24 @@ static struct platform_driver globalfifo_driver = {
     .driver = {
         .name = "globalfifo",  // 驱动名称
         .owner = THIS_MODULE,  // 模块所有者
+        .of_match_table = of_match_ptr(globalfifo_of_match),  // 添加设备树匹配表
     },
     .probe = globalfifo_probe,  // 探测函数
     .remove = globalfifo_remove, // 移除函数
 };
 
-/* 模块初始化 */
-module_platform_driver(globalfifo_driver);
+static int __init globalfifo_init(void)
+{
+    return platform_driver_register(&globalfifo_driver);
+}
+
+static void __exit globalfifo_exit(void)
+{
+    platform_driver_unregister(&globalfifo_driver);
+}
+
+module_init(globalfifo_init);
+module_exit(globalfifo_exit);
 
 MODULE_AUTHOR("JIU");
 MODULE_LICENSE("GPL v2");
