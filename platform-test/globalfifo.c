@@ -17,6 +17,9 @@
 #include <linux/miscdevice.h>
 #include <linux/of_device.h>
 
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+
 #define GLOBALFIFO_SIZE 0x1000  // FIFO缓冲区大小4KB
 #define FIFO_CLEAR 0x1          // IOCTL清除命令
 #define GLOBALFIFO_MAJOR 231    // 主设备号
@@ -32,6 +35,9 @@ struct globalfifo_dev {
     struct fasync_struct *async_queue; // 异步通知队列
     struct miscdevice miscdev;  // 杂项设备结构
 };
+
+/* proc文件指针 */
+static struct proc_dir_entry *globalfifo_proc_entry;
 
 /* 异步通知函数 */
 static int globalfifo_fasync(int fd, struct file *filp, int mode)
@@ -245,6 +251,69 @@ static const struct file_operations globalfifo_fops = {
     .release = globalfifo_release, // 释放函数
 };
 
+/* proc文件显示函数 */
+static int globalfifo_proc_show(struct seq_file *m, void *v)
+{
+    struct globalfifo_dev *dev = m->private;
+    int i;
+    
+    mutex_lock(&dev->mutex);
+    seq_printf(m, "GlobalFIFO Status:\n");
+    seq_printf(m, "Buffer size: %d bytes\n", GLOBALFIFO_SIZE);
+    seq_printf(m, "Current data length: %d bytes\n", dev->current_len);
+    seq_printf(m, "Available space: %d bytes\n", 
+               GLOBALFIFO_SIZE - dev->current_len);
+    
+    if (dev->current_len > 0) {
+        seq_printf(m, "First %d bytes: ", 
+                   dev->current_len < 20 ? dev->current_len : 20);
+        for (i = 0; i < (dev->current_len < 20 ? dev->current_len : 20); i++) {
+            seq_printf(m, "%02x ", dev->mem[i]);
+        }
+        seq_puts(m, "\n");
+    }
+    mutex_unlock(&dev->mutex);
+    return 0;
+}
+
+/* proc文件打开函数 */
+static int globalfifo_proc_open(struct inode *inode, struct file *file)
+{
+    return single_open(file, globalfifo_proc_show, PDE_DATA(inode));
+}
+
+/* proc文件操作结构体 */
+static const struct file_operations globalfifo_proc_fops = {
+    .owner = THIS_MODULE,
+    .open = globalfifo_proc_open,
+    .read = seq_read,
+    .llseek = seq_lseek,
+    .release = single_release,
+};
+
+static int create_globalfifo_proc(struct globalfifo_dev *dev)
+{
+    globalfifo_proc_entry = (struct proc_dir_entry *)proc_create_data(
+        "globalfifo", 
+        0444, 
+        NULL, 
+        &globalfifo_proc_fops, 
+        dev);
+    
+    if (!globalfifo_proc_entry) {
+        pr_err("Failed to create proc entry\n");
+        return -ENOMEM;
+    }
+    return 0;
+}
+
+/* 删除proc节点 */
+static void remove_globalfifo_proc(void)
+{
+    remove_proc_entry("globalfifo", NULL);
+}
+
+
 /* 设备探测函数 */
 static int globalfifo_probe(struct platform_device *pdev)
 {
@@ -272,8 +341,16 @@ static int globalfifo_probe(struct platform_device *pdev)
     if (ret < 0)
         goto err;
 
-    dev_info(&pdev->dev, "globalfifo drv probed\n");
+    // 创建proc节点 
+    ret = create_globalfifo_proc(gl);
+    if (ret)
+	goto err_misc;
+
+    dev_info(&pdev->dev, "globalfifo drv probed with proc support\n");
     return 0;
+
+err_misc:
+	misc_deregister(&gl->miscdev);
 err:
     return ret;
 }
@@ -283,6 +360,9 @@ static int globalfifo_remove(struct platform_device *pdev)
 {
     // 获取设备结构
     struct globalfifo_dev *gl = platform_get_drvdata(pdev);
+
+    // 删除proc节点
+    remove_globalfifo_proc();
 
     // 注销杂项设备
     misc_deregister(&gl->miscdev);
@@ -306,3 +386,4 @@ module_platform_driver(globalfifo_driver);
 
 MODULE_AUTHOR("JIU");
 MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("GlobalFIFO driver with proc support");

@@ -22,8 +22,16 @@ static const struct modversion_info ____versions[]
 __used
 __attribute__((section("__versions"))) = {
 	{ 0x9a454969, __VMLINUX_SYMBOL_STR(module_layout) },
+	{ 0xfff289f3, __VMLINUX_SYMBOL_STR(single_release) },
+	{ 0xc2910861, __VMLINUX_SYMBOL_STR(seq_read) },
+	{ 0x5971e172, __VMLINUX_SYMBOL_STR(seq_lseek) },
 	{ 0x762124b9, __VMLINUX_SYMBOL_STR(platform_driver_unregister) },
 	{ 0x8b93010a, __VMLINUX_SYMBOL_STR(__platform_driver_register) },
+	{ 0x4eb1a083, __VMLINUX_SYMBOL_STR(seq_puts) },
+	{ 0xc89de85, __VMLINUX_SYMBOL_STR(seq_printf) },
+	{ 0x59435cb7, __VMLINUX_SYMBOL_STR(single_open) },
+	{ 0x929dbad3, __VMLINUX_SYMBOL_STR(PDE_DATA) },
+	{ 0x521b39ba, __VMLINUX_SYMBOL_STR(proc_create_data) },
 	{ 0xd664465f, __VMLINUX_SYMBOL_STR(misc_register) },
 	{ 0x275ef902, __VMLINUX_SYMBOL_STR(__init_waitqueue_head) },
 	{ 0x57718273, __VMLINUX_SYMBOL_STR(__mutex_init) },
@@ -44,6 +52,7 @@ __attribute__((section("__versions"))) = {
 	{ 0xc031c111, __VMLINUX_SYMBOL_STR(fasync_helper) },
 	{ 0xba3b4911, __VMLINUX_SYMBOL_STR(_dev_info) },
 	{ 0xadaf9df6, __VMLINUX_SYMBOL_STR(misc_deregister) },
+	{ 0xb99135e, __VMLINUX_SYMBOL_STR(remove_proc_entry) },
 	{ 0xefd6cf06, __VMLINUX_SYMBOL_STR(__aeabi_unwind_cpp_pr0) },
 };
 
@@ -53,4 +62,4 @@ __attribute__((section(".modinfo"))) =
 "depends=";
 
 
-MODULE_INFO(srcversion, "3F118628A5CB3EABB9AE5DF");
+MODULE_INFO(srcversion, "EE6C4987D8C98B1EEC2EBB8");
