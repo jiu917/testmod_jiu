@@ -1,0 +1,6 @@
+config GLOBALFIFO_PLATFORM
+    tristate "IMX6ULL GlobalFIFO Platform Driver"
+    depends on ARCH_MXC || COMPILE_TEST
+    default n
+    help
+      This is the platform driver for globalfifo on IMX6ULL.

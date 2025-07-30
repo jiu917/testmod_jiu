@@ -1,0 +1,1 @@
+cmd_drivers/misc/platform-test//globalfifo.ko := arm-linux-gnueabihf-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o drivers/misc/platform-test//globalfifo.ko drivers/misc/platform-test//globalfifo.o drivers/misc/platform-test//globalfifo.mod.o ;  true
