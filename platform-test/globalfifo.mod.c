@@ -38,9 +38,12 @@ __attribute__((section("__versions"))) = {
 	{ 0xd664465f, __VMLINUX_SYMBOL_STR(misc_register) },
 	{ 0x275ef902, __VMLINUX_SYMBOL_STR(__init_waitqueue_head) },
 	{ 0x57718273, __VMLINUX_SYMBOL_STR(__mutex_init) },
+	{ 0x1c89c0e0, __VMLINUX_SYMBOL_STR(input_register_device) },
+	{ 0x1eae382b, __VMLINUX_SYMBOL_STR(devm_input_allocate_device) },
 	{ 0x879e479b, __VMLINUX_SYMBOL_STR(devm_kmalloc) },
 	{ 0x9d669763, __VMLINUX_SYMBOL_STR(memcpy) },
 	{ 0xf4fa543b, __VMLINUX_SYMBOL_STR(arm_copy_to_user) },
+	{ 0x7aacad7c, __VMLINUX_SYMBOL_STR(input_event) },
 	{ 0xce9ef1a7, __VMLINUX_SYMBOL_STR(kill_fasync) },
 	{ 0xd85cd67e, __VMLINUX_SYMBOL_STR(__wake_up) },
 	{ 0x28cc25db, __VMLINUX_SYMBOL_STR(arm_copy_from_user) },
@@ -69,4 +72,4 @@ __attribute__((section(".modinfo"))) =
 MODULE_ALIAS("of:N*T*Cglobalfifo");
 MODULE_ALIAS("of:N*T*CglobalfifoC*");
 
-MODULE_INFO(srcversion, "7B62578BC42D525B32082FF");
+MODULE_INFO(srcversion, "7141C278DA33C3EBC9F741F");

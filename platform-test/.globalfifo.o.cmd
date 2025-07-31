@@ -737,6 +737,9 @@ deps_drivers/misc/platform-test/globalfifo.o := \
   include/linux/property.h \
   include/linux/fwnode.h \
   include/linux/proc_fs.h \
+  include/linux/input.h \
+  include/uapi/linux/input.h \
+  include/uapi/linux/input-event-codes.h \
 
 drivers/misc/platform-test/globalfifo.o: $(deps_drivers/misc/platform-test/globalfifo.o)
 

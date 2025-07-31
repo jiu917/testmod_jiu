@@ -23,6 +23,8 @@
 #include <linux/device.h>
 #include <linux/sysfs.h>
 
+#include <linux/input.h>
+
 #define GLOBALFIFO_SIZE 0x1000  // FIFO缓冲区大小4KB
 #define FIFO_CLEAR 0x1          // IOCTL清除命令
 #define GLOBALFIFO_MAJOR 231    // 主设备号
@@ -44,6 +46,7 @@ struct globalfifo_dev {
     struct fasync_struct *async_queue; // 异步通知队列
     struct miscdevice miscdev;  // 杂项设备结构
     struct device *dev;
+    struct input_dev *input_dev; 
 };
 
 /* proc文件指针 */
@@ -268,8 +271,47 @@ static ssize_t globalfifo_write(struct file *filp, const char __user *buf,
         goto out;
     } else {
         dev->current_len += count;  // 更新长度
-        printk(KERN_INFO "written %d bytes(s),current_len:%d\n", count,
-               dev->current_len);
+
+        if (count > 0) {
+    char last_char = dev->mem[dev->current_len - 1]; // 获取最后写入的字符
+    printk(KERN_DEBUG "globalfifo: 收到字符 '%c' (ASCII: %d)\n", last_char, last_char);
+
+    switch (last_char) {
+    case 'A':
+        printk(KERN_DEBUG "globalfifo: 触发 KEY_A 按下事件\n");
+        input_report_key(dev->input_dev, KEY_A, 1);
+        input_sync(dev->input_dev);
+        printk(KERN_DEBUG "globalfifo: 触发 KEY_A 释放事件\n");
+        input_report_key(dev->input_dev, KEY_A, 0);
+        input_sync(dev->input_dev);
+        break;
+
+    case 'B':
+        printk(KERN_DEBUG "globalfifo: 触发 KEY_B 按下事件\n");
+        input_report_key(dev->input_dev, KEY_B, 1);
+        input_sync(dev->input_dev);
+        printk(KERN_DEBUG "globalfifo: 触发 KEY_B 释放事件\n");
+        input_report_key(dev->input_dev, KEY_B, 0);
+        input_sync(dev->input_dev);
+        break;
+
+    case 'C':
+        printk(KERN_DEBUG "globalfifo: 触发 KEY_C 按下事件\n");
+        input_report_key(dev->input_dev, KEY_C, 1);
+        input_sync(dev->input_dev);
+        printk(KERN_DEBUG "globalfifo: 触发 KEY_C 释放事件\n");
+        input_report_key(dev->input_dev, KEY_C, 0);
+        input_sync(dev->input_dev);
+        break;
+
+    default:
+        printk(KERN_DEBUG "globalfifo: 忽略未知字符 '%c'\n", last_char);
+        break;
+    }
+}
+
+        //printk(KERN_INFO "written %d bytes(s),current_len:%d\n", count,
+               //dev->current_len);
 
         wake_up_interruptible(&dev->r_wait);  // 唤醒读等待队列
 
@@ -377,6 +419,33 @@ static int globalfifo_probe(struct platform_device *pdev)
     if (!gl)
         return -ENOMEM;
 
+    /* input初始化 */
+    gl->input_dev = devm_input_allocate_device(&pdev->dev);
+    if (!gl->input_dev) {
+        dev_err(&pdev->dev, "Failed to allocate input device\n");
+        ret = -ENOMEM;
+        goto err_alloc;
+    }
+    
+    gl->input_dev->name = "GlobalFIFO Input";
+    gl->input_dev->phys = "globalfifo/input0";
+    gl->input_dev->id.bustype = BUS_HOST;
+    gl->input_dev->id.vendor = 0x0001;
+    gl->input_dev->id.product = 0x0001;
+    gl->input_dev->id.version = 0x0100;
+    
+    __set_bit(EV_KEY, gl->input_dev->evbit);
+    __set_bit(EV_REP, gl->input_dev->evbit);
+    __set_bit(KEY_A, gl->input_dev->keybit);
+    __set_bit(KEY_B, gl->input_dev->keybit);
+    __set_bit(KEY_C, gl->input_dev->keybit);
+
+    ret = input_register_device(gl->input_dev);
+    if (ret) {
+        dev_err(&pdev->dev, "Failed to register input device\n");
+        goto err_input;
+    }
+
     /* 设置驱动私有数据 */
     platform_set_drvdata(pdev, gl);
     gl->dev = &pdev->dev;
@@ -423,6 +492,10 @@ err_status:
     device_remove_file(&pdev->dev, &dev_attr_status);
 err_misc:
     misc_deregister(&gl->miscdev);
+    return ret;
+err_input:
+    // input设备会自动释放，因为使用了devm
+err_alloc:
     return ret;
 }
 
